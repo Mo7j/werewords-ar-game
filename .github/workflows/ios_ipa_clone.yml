@@ -8,15 +8,19 @@ on:
 jobs:
   build-ios:
     runs-on: macos-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Flutter (stable by cloning)
+      # Step 1: clone Flutter and register its bin dir for PATH (affects next steps)
+      - name: Install Flutter (clone stable)
         run: |
           git clone https://github.com/flutter/flutter.git -b stable $HOME/flutter
           echo "$HOME/flutter/bin" >> $GITHUB_PATH
+
+      # Step 2: now PATH contains flutter
+      - name: Flutter version/doctor
+        run: |
           flutter --version
           flutter doctor -v
 
