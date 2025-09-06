@@ -26,7 +26,6 @@ jobs:
           flutter precache --ios
 
       - name: Pub get
-        working-directory: werewords
         run: flutter pub get
 
       - name: CocoaPods repo update
