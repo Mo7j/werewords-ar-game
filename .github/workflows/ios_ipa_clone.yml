@@ -1,0 +1,50 @@
+name: Build iOS IPA (CLONE Flutter)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Flutter (stable by cloning)
+        run: |
+          git clone https://github.com/flutter/flutter.git -b stable $HOME/flutter
+          echo "$HOME/flutter/bin" >> $GITHUB_PATH
+          flutter --version
+          flutter doctor -v
+
+      - name: Precache iOS artifacts
+        run: flutter precache --ios
+
+      - name: Pub get
+        run: flutter pub get
+
+      - name: Pod repo update
+        run: |
+          cd ios
+          pod repo update
+
+      - name: Build iOS (no codesign)
+        run: flutter build ios --release --no-codesign
+
+      - name: Create unsigned IPA
+        working-directory: build/ios/iphoneos
+        run: |
+          rm -rf Payload
+          mkdir -p Payload
+          cp -R "Runner.app" "Payload/Runner.app"
+          zip -r werewords-unsigned.ipa Payload
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: werewords-unsigned-ipa
+          path: build/ios/iphoneos/werewords-unsigned.ipa
+          if-no-files-found: error
