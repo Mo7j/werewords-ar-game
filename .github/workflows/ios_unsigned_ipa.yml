@@ -13,35 +13,30 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Clone Flutter and register its bin path for LATER steps
       - name: Install Flutter (stable)
-        run: |
-          git clone https://github.com/flutter/flutter.git -b stable $HOME/flutter
-          echo "$HOME/flutter/bin" >> $GITHUB_PATH
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
 
-      # Now PATH contains flutter in this new step
       - name: Flutter doctor
         run: |
           flutter --version
           flutter doctor -v
           flutter precache --ios
 
-      # Your project is in the werewords/ subfolder
       - name: Pub get
         working-directory: werewords
         run: flutter pub get
 
-      # Make sure CocoaPods is up-to-date on the runner
       - name: CocoaPods repo update
         working-directory: werewords/ios
         run: pod repo update
 
-      # Build iOS without code signing
       - name: Build iOS (no codesign)
         working-directory: werewords
         run: flutter build ios --release --no-codesign
 
-      # Package Runner.app -> Payload -> IPA
       - name: Create unsigned IPA
         working-directory: werewords/build/ios/iphoneos
         run: |
@@ -50,7 +45,6 @@ jobs:
           cp -R "Runner.app" "Payload/Runner.app"
           zip -r werewords-unsigned.ipa Payload
 
-      # Upload IPA as artifact
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
