@@ -13,7 +13,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Install Flutter by cloning from github (works reliably on arm64)
+      # Install Flutter by cloning (works reliably on Apple Silicon)
       - name: Install Flutter (stable)
         run: |
           git clone https://github.com/flutter/flutter.git -b stable $HOME/flutter
@@ -21,15 +21,14 @@ jobs:
           flutter --version
           flutter doctor -v
 
-      # (Optional) Precache iOS artifacts so first build is smoother
+      # (Optional) Precache iOS artifacts
       - name: Precache iOS artifacts
-        run: |
-          flutter precache --ios
+        run: flutter precache --ios
 
       - name: Pub get
         run: flutter pub get
 
-      # If CocoaPods repo is stale on the runner, update it once
+      # If CocoaPods repo is stale on the runner, update it
       - name: Pod repo update
         run: |
           cd ios
@@ -37,10 +36,9 @@ jobs:
 
       # Build iOS without code signing
       - name: Build iOS (no codesign)
-        run: |
-          flutter build ios --release --no-codesign
+        run: flutter build ios --release --no-codesign
 
-      # Package Runner.app into a standard IPA: Payload/Runner.app -> werewords-unsigned.ipa
+      # Package the .app into an IPA (Payload/Runner.app => werewords-unsigned.ipa)
       - name: Create unsigned IPA
         working-directory: build/ios/iphoneos
         run: |
@@ -49,6 +47,7 @@ jobs:
           cp -R "Runner.app" "Payload/Runner.app"
           zip -r werewords-unsigned.ipa Payload
 
+      # Upload IPA as artifact
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
