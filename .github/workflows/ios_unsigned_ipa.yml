@@ -1,4 +1,4 @@
-name: Build iOS IPA (CLONE Flutter)
+name: iOS unsigned IPA (clone Flutter)
 
 on:
   workflow_dispatch:
@@ -8,47 +8,52 @@ on:
 jobs:
   build-ios:
     runs-on: macos-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Step 1: clone Flutter and register its bin dir for PATH (affects next steps)
-      - name: Install Flutter (clone stable)
+      # Clone Flutter and register its bin path for LATER steps
+      - name: Install Flutter (stable)
         run: |
           git clone https://github.com/flutter/flutter.git -b stable $HOME/flutter
           echo "$HOME/flutter/bin" >> $GITHUB_PATH
 
-      # Step 2: now PATH contains flutter
-      - name: Flutter version/doctor
+      # Now PATH contains flutter in this new step
+      - name: Flutter doctor
         run: |
           flutter --version
           flutter doctor -v
+          flutter precache --ios
 
-      - name: Precache iOS artifacts
-        run: flutter precache --ios
-
+      # Your project is in the werewords/ subfolder
       - name: Pub get
+        working-directory: werewords
         run: flutter pub get
 
-      - name: Pod repo update
-        run: |
-          cd ios
-          pod repo update
+      # Make sure CocoaPods is up-to-date on the runner
+      - name: CocoaPods repo update
+        working-directory: werewords/ios
+        run: pod repo update
 
+      # Build iOS without code signing
       - name: Build iOS (no codesign)
+        working-directory: werewords
         run: flutter build ios --release --no-codesign
 
+      # Package Runner.app -> Payload -> IPA
       - name: Create unsigned IPA
-        working-directory: build/ios/iphoneos
+        working-directory: werewords/build/ios/iphoneos
         run: |
           rm -rf Payload
           mkdir -p Payload
           cp -R "Runner.app" "Payload/Runner.app"
           zip -r werewords-unsigned.ipa Payload
 
+      # Upload IPA as artifact
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: werewords-unsigned-ipa
-          path: build/ios/iphoneos/werewords-unsigned.ipa
+          path: werewords/build/ios/iphoneos/werewords-unsigned.ipa
           if-no-files-found: error
