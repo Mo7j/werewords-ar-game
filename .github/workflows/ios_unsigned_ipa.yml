@@ -31,7 +31,16 @@ jobs:
       - name: CocoaPods repo update
         working-directory: ios
         run: pod repo update
+      - name: Clean CocoaPods
+        working-directory: ios
+        run: |
+         pod deintegrate || true
+         rm -rf Pods Podfile.lock
 
+      - name: Install CocoaPods dependencies
+        working-directory: ios
+        run: pod install
+    
       - name: Build iOS (no codesign)
         run: flutter build ios --release --no-codesign
 
