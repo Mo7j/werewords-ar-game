@@ -1,0 +1,31 @@
+name: werewords
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.9.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  flutter_riverpod: ^2.6.1
+  flutter_localizations:
+    sdk: flutter
+  google_fonts: ^6.3.1
+  flutter_animate: ^4.5.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  # keep Material icons
+  uses-material-design: true
+
+  # make sure this folder exists and contains ar_words.json
+  assets:
+    - assets/words/
