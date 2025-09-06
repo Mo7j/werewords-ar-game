@@ -1,9 +1,9 @@
 name: Build iOS IPA (unsigned)
 
 on:
-  workflow_dispatch:        # allow manual runs
+  workflow_dispatch:
   push:
-    branches: [ main ]      # also build on push to main
+    branches: [ main ]
 
 jobs:
   build-ios:
@@ -13,25 +13,34 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: 'stable'
-          channel: 'stable'
-          cache: true
+      # Install Flutter by cloning from github (works reliably on arm64)
+      - name: Install Flutter (stable)
+        run: |
+          git clone https://github.com/flutter/flutter.git -b stable $HOME/flutter
+          echo "$HOME/flutter/bin" >> $GITHUB_PATH
+          flutter --version
+          flutter doctor -v
 
-      - name: Flutter doctor
-        run: flutter doctor -v
+      # (Optional) Precache iOS artifacts so first build is smoother
+      - name: Precache iOS artifacts
+        run: |
+          flutter precache --ios
 
-      - name: Get packages
+      - name: Pub get
         run: flutter pub get
+
+      # If CocoaPods repo is stale on the runner, update it once
+      - name: Pod repo update
+        run: |
+          cd ios
+          pod repo update
 
       # Build iOS without code signing
       - name: Build iOS (no codesign)
         run: |
           flutter build ios --release --no-codesign
 
-      # Package the .app into a standard .ipa (Payload/Runner.app)
+      # Package Runner.app into a standard IPA: Payload/Runner.app -> werewords-unsigned.ipa
       - name: Create unsigned IPA
         working-directory: build/ios/iphoneos
         run: |
@@ -40,7 +49,6 @@ jobs:
           cp -R "Runner.app" "Payload/Runner.app"
           zip -r werewords-unsigned.ipa Payload
 
-      # Upload IPA as an artifact to download
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
