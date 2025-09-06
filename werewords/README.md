@@ -1,2 +1,0 @@
-# werewords
-game
