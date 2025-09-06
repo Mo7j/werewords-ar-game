@@ -1,0 +1,49 @@
+name: Build iOS IPA (unsigned)
+
+on:
+  workflow_dispatch:        # allow manual runs
+  push:
+    branches: [ main ]      # also build on push to main
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 'stable'
+          channel: 'stable'
+          cache: true
+
+      - name: Flutter doctor
+        run: flutter doctor -v
+
+      - name: Get packages
+        run: flutter pub get
+
+      # Build iOS without code signing
+      - name: Build iOS (no codesign)
+        run: |
+          flutter build ios --release --no-codesign
+
+      # Package the .app into a standard .ipa (Payload/Runner.app)
+      - name: Create unsigned IPA
+        working-directory: build/ios/iphoneos
+        run: |
+          rm -rf Payload
+          mkdir -p Payload
+          cp -R "Runner.app" "Payload/Runner.app"
+          zip -r werewords-unsigned.ipa Payload
+
+      # Upload IPA as an artifact to download
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: werewords-unsigned-ipa
+          path: build/ios/iphoneos/werewords-unsigned.ipa
+          if-no-files-found: error
