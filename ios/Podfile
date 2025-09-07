@@ -1,14 +1,15 @@
-# Uncomment this line to define a global platform for your project
 platform :ios, '13.0'
 
-# This block sets up CocoaPods for Flutter – required
-flutter_root = File.expand_path('..', File.dirname(__FILE__))
+# Point to the Flutter SDK installed on the CI runner (or locally)
+flutter_root = ENV['FLUTTER_ROOT']
+raise "FLUTTER_ROOT not set" if flutter_root.nil? || flutter_root.empty?
+
 require File.expand_path('packages/flutter_tools/bin/podhelper', flutter_root)
 
 flutter_ios_podfile_setup
 
 target 'Runner' do
-  # Use static frameworks to play nicely with Flutter plugins
+  # static frameworks work best with Flutter plugins
   use_frameworks! :linkage => :static
   use_modular_headers!
 
