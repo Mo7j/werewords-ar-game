@@ -16,7 +16,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.3'   # explicit -> avoids channel resolution issues
+          flutter-version: '3.35.3'   # explicit -> avoids channel resolution issues
           channel: stable
           architecture: x64           # avoid arm64 lookup glitches
           cache: true
