@@ -16,10 +16,12 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.24.3'   # explicit -> avoids channel resolution issues
           channel: stable
+          architecture: x64           # avoid arm64 lookup glitches
           cache: true
 
-      - name: Flutter doctor
+      - name: Flutter doctor / precache
         run: |
           flutter --version
           flutter doctor -v
@@ -28,19 +30,21 @@ jobs:
       - name: Pub get
         run: flutter pub get
 
+      # Make sure CocoaPods is in a good state and uses the new Podfile
       - name: CocoaPods repo update
         working-directory: ios
         run: pod repo update
-      - name: Clean CocoaPods
+
+      - name: Clean CocoaPods (safe to run; ignores errors)
         working-directory: ios
         run: |
-         pod deintegrate || true
-         rm -rf Pods Podfile.lock
+          pod deintegrate || true
+          rm -rf Pods Podfile.lock
 
       - name: Install CocoaPods dependencies
         working-directory: ios
-        run: pod install
-    
+        run: pod install --repo-update
+
       - name: Build iOS (no codesign)
         run: flutter build ios --release --no-codesign
 
@@ -56,5 +60,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: werewords-unsigned-ipa
-          path: werewords/build/ios/iphoneos/werewords-unsigned.ipa
+          path: build/ios/iphoneos/werewords-unsigned.ipa   # <- fixed path
           if-no-files-found: error
