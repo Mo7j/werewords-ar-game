@@ -9,10 +9,12 @@ final wordFoundProvider = StateProvider<bool>((ref) => false);
 
 class GameConfigNotifier extends StateNotifier<GameConfig> {
   GameConfigNotifier() : super(GameConfig.defaultConfig);
+
   void setPlayerCount(int v) => state = state.copyWith(playerCount: v);
-  void toggleSeer(bool v) => state = state.copyWith(includeSeer: v);
   void setRoundSeconds(int v) => state = state.copyWith(roundSeconds: v);
   void setDifficulty(Difficulty d) => state = state.copyWith(difficulty: d);
+  void setPostDiscussionSeconds(int v) =>
+      state = state.copyWith(postDiscussionSeconds: v);
 }
 
 final gameConfigProvider =
@@ -44,11 +46,7 @@ final wordRepoProvider = FutureProvider<WordRepository>((ref) async {
 });
 
 final phaseProvider = StateProvider<Phase>((ref) => Phase.setup);
-
-// Selected secret word
 final secretWordProvider = StateProvider<String?>((ref) => null);
-
-// Assigned roles
 final assignedRolesProvider = StateProvider<List<Role>>((ref) => const []);
 
 final _rng = Random();
@@ -77,39 +75,51 @@ class QaLogNotifier extends StateNotifier<List<QaEntry>> {
   void add(Answer a, {String? note}) {
     state = [
       ...state,
-      QaEntry(answer: a, note: note?.trim().isEmpty == true ? null : note, at: DateTime.now()),
+      QaEntry(
+        answer: a,
+        note: note?.trim().isEmpty == true ? null : note,
+        at: DateTime.now(),
+      ),
     ];
   }
+
   void clear() => state = const [];
 }
-final qaLogProvider = StateNotifierProvider<QaLogNotifier, List<QaEntry>>((ref) {
+
+final qaLogProvider =
+    StateNotifierProvider<QaLogNotifier, List<QaEntry>>((ref) {
   return QaLogNotifier();
 });
 
-// ===== Round timer =====
+// ===== Timer =====
 class TimerState {
   final int totalSeconds;
   final int remaining;
   final bool running;
-  const TimerState({required this.totalSeconds, required this.remaining, required this.running});
+  const TimerState({
+    required this.totalSeconds,
+    required this.remaining,
+    required this.running,
+  });
 
   double get progress => totalSeconds == 0 ? 0 : remaining / totalSeconds;
 
-  TimerState copyWith({int? totalSeconds, int? remaining, bool? running}) => TimerState(
-    totalSeconds: totalSeconds ?? this.totalSeconds,
-    remaining: remaining ?? this.remaining,
-    running: running ?? this.running,
-  );
+  TimerState copyWith({int? totalSeconds, int? remaining, bool? running}) =>
+      TimerState(
+        totalSeconds: totalSeconds ?? this.totalSeconds,
+        remaining: remaining ?? this.remaining,
+        running: running ?? this.running,
+      );
 }
 
 class TimerNotifier extends StateNotifier<TimerState> {
   Timer? _ticker;
   TimerNotifier(int initial)
-      : super(TimerState(totalSeconds: initial, remaining: initial, running: false));
+      : super(TimerState(
+            totalSeconds: initial, remaining: initial, running: false));
 
-  void start() {
+  void _tickStart() {
     _ticker?.cancel();
-    state = state.copyWith(remaining: state.totalSeconds, running: true);
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (state.remaining <= 1) {
         _ticker?.cancel();
@@ -118,6 +128,12 @@ class TimerNotifier extends StateNotifier<TimerState> {
         state = state.copyWith(remaining: state.remaining - 1);
       }
     });
+  }
+
+  void start() {
+    _ticker?.cancel();
+    state = state.copyWith(remaining: state.totalSeconds, running: true);
+    _tickStart();
   }
 
   void pause() {
@@ -128,19 +144,20 @@ class TimerNotifier extends StateNotifier<TimerState> {
   void resume() {
     if (state.running || state.remaining <= 0) return;
     state = state.copyWith(running: true);
-    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (state.remaining <= 1) {
-        _ticker?.cancel();
-        state = state.copyWith(remaining: 0, running: false);
-      } else {
-        state = state.copyWith(remaining: state.remaining - 1);
-      }
-    });
+    _tickStart();
   }
 
   void resetTo(int seconds) {
     _ticker?.cancel();
-    state = TimerState(totalSeconds: seconds, remaining: seconds, running: false);
+    state =
+        TimerState(totalSeconds: seconds, remaining: seconds, running: false);
+  }
+
+  void startWith(int seconds) {
+    _ticker?.cancel();
+    state =
+        TimerState(totalSeconds: seconds, remaining: seconds, running: true);
+    _tickStart();
   }
 
   @override
@@ -155,10 +172,9 @@ final timerProvider = StateNotifierProvider<TimerNotifier, TimerState>((ref) {
   return TimerNotifier(seconds);
 });
 
-// helper to reinitialize the timer when config changes (call before a new round)
 void initRound(WidgetRef ref) {
   ref.read(qaLogProvider.notifier).clear();
-  ref.read(wordFoundProvider.notifier).state = false; // <— reset here
+  ref.read(wordFoundProvider.notifier).state = false;
   final secs = ref.read(gameConfigProvider).roundSeconds;
   ref.read(timerProvider.notifier).resetTo(secs);
 }

@@ -1,211 +1,422 @@
-import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models.dart';
+import '../providers.dart';
 import 'theme.dart';
 import 'results_screen.dart';
 
-class DiscussionTimerScreen extends StatefulWidget {
-  final String title;
-  final String subtitle;
+/// ===============================
+/// Shared big, pulsing timer card
+/// ===============================
+class _BigPulsingTimerCard extends StatelessWidget {
+  final double progress; // 0..1
   final int seconds;
-  final VoidCallback? onDone;
-
-  const DiscussionTimerScreen({
-    super.key,
-    required this.title,
-    required this.subtitle,
-    this.seconds = 60,
-    this.onDone,
+  final bool running;
+  final String message;
+  const _BigPulsingTimerCard({
+    required this.progress,
+    required this.seconds,
+    required this.running,
+    required this.message,
   });
-
-  @override
-  State<DiscussionTimerScreen> createState() => _DiscussionTimerScreenState();
-}
-
-class _DiscussionTimerScreenState extends State<DiscussionTimerScreen> {
-  late int remaining;
-  Timer? _t;
-
-  @override
-  void initState() {
-    super.initState();
-    remaining = widget.seconds;
-    _t = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      if (remaining <= 1) {
-        _t?.cancel();
-        setState(() => remaining = 0);
-        widget.onDone?.call();
-        if (mounted) {
-          Navigator.of(context).pushReplacement(
-            PageRouteBuilder(
-              pageBuilder: (_, __, ___) => const ResultsScreen(),
-              transitionsBuilder: (_, a, __, c) => FadeTransition(opacity: a, child: c),
-            ),
-          );
-        }
-      } else {
-        setState(() => remaining -= 1);
-      }
-    });
-  }
-
-  @override
-  void dispose() { _t?.cancel(); super.dispose(); }
-
-  String _fmt(int s) {
-    final m = (s ~/ 60).toString().padLeft(2, '0');
-    final r = (s % 60).toString().padLeft(2, '0');
-    return '$m:$r';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        appBar: AppBar(title: Text(widget.title), backgroundColor: Colors.transparent),
-        body: Stack(
-          children: [
-            const _GradBG(),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Container(
-                    decoration: glassCard(24),
-                    padding: const EdgeInsets.all(18),
-                    child: Column(
-                      children: [
-                        Text(widget.subtitle, textAlign: TextAlign.center),
-                        const SizedBox(height: 12),
-                        _BigRing(seconds: remaining),
-                      ],
-                    ),
-                  ).animate().fadeIn().moveY(begin: -8, end: 0),
-                  const Spacer(),
-                  FilledButton.icon(
-                    onPressed: () {
-                      _t?.cancel();
-                      Navigator.of(context).pushReplacement(
-                        PageRouteBuilder(
-                          pageBuilder: (_, __, ___) => const ResultsScreen(),
-                          transitionsBuilder: (_, a, __, c) => FadeTransition(opacity: a, child: c),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.check_circle_rounded),
-                    label: const Text('تم — انتقل للنتائج'),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _GradBG extends StatefulWidget { const _GradBG(); @override State<_GradBG> createState() => _GradBGState(); }
-class _GradBGState extends State<_GradBG> with SingleTickerProviderStateMixin {
-  late final AnimationController _c;
-  @override void initState() { super.initState(); _c = AnimationController(vsync: this, duration: const Duration(seconds: 8))..repeat(reverse: true); }
-  @override void dispose() { _c.dispose(); super.dispose(); }
-  @override Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _c,
-      builder: (_, __) {
-        final t = _c.value;
-        return Container(
-          decoration: BoxDecoration(
-            gradient: RadialGradient(
-              center: Alignment(0.2 - 0.4 * t, -0.2 + 0.3 * t),
-              radius: 1.2,
-              colors: [
-                AppColors.accent.withOpacity(0.12),
-                AppColors.accent2.withOpacity(0.08),
-                Colors.black,
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _BigRing extends StatelessWidget {
-  final int seconds;
-  const _BigRing({required this.seconds});
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      size: const Size(160, 160),
-      painter: _RingPainter(seconds / 60.0), // simple 60s max visual; purely aesthetic
-      child: Center(
-        child: Text(
-          _fmt(seconds),
-          style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w800),
-        ),
-      ),
-    );
-  }
 
   String _fmt(int secs) {
     final m = (secs ~/ 60).toString().padLeft(2, '0');
     final s = (secs % 60).toString().padLeft(2, '0');
     return '$m:$s';
   }
+
+  @override
+  Widget build(BuildContext context) {
+    // Pulsation tiers
+    final p60 = running && seconds <= 60;
+    final p30 = running && seconds < 30;
+    final p15 = running && seconds <= 15;
+
+    double scaleEnd = 1.0, blurEnd = 0.0;
+    Duration dur = 900.ms;
+
+    if (p60) {
+      scaleEnd = 1.02;
+      blurEnd = 0.4;
+      dur = 800.ms;
+    }
+    if (p30) {
+      scaleEnd = 1.04;
+      blurEnd = 0.8;
+      dur = 650.ms;
+    }
+    if (p15) {
+      scaleEnd = 1.08;
+      blurEnd = 1.4;
+      dur = 500.ms;
+    }
+
+    Widget ring = SizedBox(
+      width: 160,
+      height: 160,
+      child: CustomPaint(
+        painter: _RingPainter(progress: progress),
+        child: Center(
+          child: Text(
+            _fmt(seconds),
+            style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w800),
+          ).animate(target: seconds.toDouble()).scale(duration: 300.ms),
+        ),
+      ),
+    );
+
+    if (p60) {
+      ring = ring
+          .animate(onPlay: (c) => c.repeat(reverse: true))
+          .scale(end: Offset(scaleEnd, scaleEnd), duration: dur)
+          .then()
+          .blurXY(end: blurEnd, duration: dur);
+    }
+
+    return Container(
+      decoration: glassCard(32),
+      padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
+      child: Row(
+        children: [
+          ring,
+          const SizedBox(width: 18),
+          Expanded(
+            child: Text(
+              message,
+              style: Theme.of(context).textTheme.titleMedium,
+            ).animate().fadeIn(),
+          ),
+        ],
+      ),
+    ).animate().fadeIn().moveY(begin: -8, end: 0);
+  }
 }
 
 class _RingPainter extends CustomPainter {
-  final double progress; // 0..1 (just for look)
-  _RingPainter(this.progress);
+  final double progress; // 0..1
+  _RingPainter({required this.progress});
 
   @override
   void paint(Canvas canvas, Size size) {
-    const stroke = 10.0;
+    final stroke = 10.0;
     final rect = Offset.zero & size;
-    final center = rect.center;
-    final radius = math.min(size.width, size.height) / 2 - stroke;
 
     final bg = Paint()
       ..color = Colors.white.withOpacity(0.08)
       ..style = PaintingStyle.stroke
       ..strokeWidth = stroke;
-
     final fg = Paint()
-      ..shader = const LinearGradient(colors: [AppColors.accent, AppColors.accent2]).createShader(rect)
+      ..shader =
+          const LinearGradient(colors: [AppColors.accent, AppColors.accent2])
+              .createShader(rect)
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeWidth = stroke;
 
+    final center = rect.center;
+    final radius = math.min(size.width, size.height) / 2 - stroke;
+
+    // background circle
     canvas.drawCircle(center, radius, bg);
-    canvas.drawArc(Rect.fromCircle(center: center, radius: radius), -math.pi/2, progress * 2 * math.pi, false, fg);
+
+    // progress arc
+    final sweep = 2 * math.pi * progress;
+    final start = -math.pi / 2; // top
+    final rectArc = Rect.fromCircle(center: center, radius: radius);
+    canvas.drawArc(rectArc, start, sweep, false, fg);
   }
 
   @override
-  bool shouldRepaint(covariant _RingPainter oldDelegate) => oldDelegate.progress != progress;
+  bool shouldRepaint(covariant _RingPainter old) => old.progress != progress;
 }
 
-// Convenience subclasses
-
-class FindWerewolfTimerScreen extends DiscussionTimerScreen {
-  const FindWerewolfTimerScreen({super.key})
-      : super(
-          title: 'نقاش: من هو المستذئب؟',
-          subtitle: 'انتهى الوقت ولم تُكتشف الكلمة. لديكم دقيقة لتحديد المستذئب.',
-          seconds: 60,
-        );
+/// =======================================
+/// Find Werewolf Discussion Timer Screen
+/// =======================================
+class FindWerewolfTimerScreen extends ConsumerStatefulWidget {
+  const FindWerewolfTimerScreen({super.key});
+  @override
+  ConsumerState<FindWerewolfTimerScreen> createState() =>
+      _FindWerewolfTimerScreenState();
 }
 
-class HuntSeerTimerScreen extends DiscussionTimerScreen {
-  const HuntSeerTimerScreen({super.key})
-      : super(
-          title: 'دور المستذئب: اكتشف العرّاف/ة',
-          subtitle: 'أحسنتم! عثرتم على الكلمة. الآن أمام المستذئب 30 ثانية ليخمن العرّاف/ة.',
-          seconds: 30,
-        );
+class _FindWerewolfTimerScreenState
+    extends ConsumerState<FindWerewolfTimerScreen> {
+  bool _started = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_started) {
+      _started = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final cfg = ref.read(gameConfigProvider);
+        ref.read(timerProvider.notifier).startWith(cfg.postDiscussionSeconds);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tState = ref.watch(timerProvider);
+    final finished = !tState.running && tState.remaining == 0;
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: AppColors.bg,
+        appBar: AppBar(
+          title: const Text('نقاش اكتشاف المستذئب'),
+          backgroundColor: Colors.transparent,
+          actions: [
+            IconButton(
+              tooltip: tState.running ? 'إيقاف مؤقت' : 'استئناف',
+              onPressed: () {
+                HapticFeedback.selectionClick();
+                if (tState.running) {
+                  ref.read(timerProvider.notifier).pause();
+                } else {
+                  if (!finished) ref.read(timerProvider.notifier).resume();
+                }
+              },
+              icon: Icon(
+                tState.running ? Icons.pause_rounded : Icons.play_arrow_rounded,
+              ),
+            ),
+            const SizedBox(width: 4),
+          ],
+        ),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              children: [
+                Opacity(
+                  opacity: finished ? 0.35 : 1.0,
+                  child: _BigPulsingTimerCard(
+                    progress: tState.progress,
+                    seconds: tState.remaining,
+                    running: tState.running,
+                    message: tState.running
+                        ? 'ناقشوا وحددوا من هو المستذئب!'
+                        : (finished ? 'انتهى الوقت' : 'مُوقّف'),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                if (finished)
+                  Container(
+                    decoration: glassCard(18),
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.timer_off_rounded),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Text('انتهى الوقت! اضغطوا لعرض النتائج.'),
+                        ),
+                        FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.accent,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () {
+                            ref.read(phaseProvider.notifier).state =
+                                Phase.results;
+                            Navigator.of(context).push(
+                              PageRouteBuilder(
+                                pageBuilder: (_, __, ___) =>
+                                    const ResultsScreen(),
+                                transitionsBuilder: (_, a, __, c) =>
+                                    FadeTransition(opacity: a, child: c),
+                              ),
+                            );
+                          },
+                          child: const Text('عرض النتائج'),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                const Spacer(),
+
+                // Manual finish if they finish early
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 22),
+                      backgroundColor: AppColors.accent,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                    ),
+                    onPressed: () {
+                      ref.read(phaseProvider.notifier).state = Phase.results;
+                      Navigator.of(context).push(
+                        PageRouteBuilder(
+                          pageBuilder: (_, __, ___) => const ResultsScreen(),
+                          transitionsBuilder: (_, a, __, c) =>
+                              FadeTransition(opacity: a, child: c),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.how_to_vote_rounded, size: 28),
+                    label: const Text('تمّ التصويت',
+                        style: TextStyle(fontSize: 18)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// =======================================
+/// Hunt Seer Timer Screen
+/// =======================================
+class HuntSeerTimerScreen extends ConsumerStatefulWidget {
+  const HuntSeerTimerScreen({super.key});
+  @override
+  ConsumerState<HuntSeerTimerScreen> createState() =>
+      _HuntSeerTimerScreenState();
+}
+
+class _HuntSeerTimerScreenState extends ConsumerState<HuntSeerTimerScreen> {
+  bool _started = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_started) {
+      _started = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final cfg = ref.read(gameConfigProvider);
+        ref.read(timerProvider.notifier).startWith(cfg.postDiscussionSeconds);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tState = ref.watch(timerProvider);
+    final finished = !tState.running && tState.remaining == 0;
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: AppColors.bg,
+        appBar: AppBar(
+          title: const Text('مطاردة العرّاف/ة'),
+          backgroundColor: Colors.transparent,
+          actions: [
+            IconButton(
+              tooltip: tState.running ? 'إيقاف مؤقت' : 'استئناف',
+              onPressed: () {
+                HapticFeedback.selectionClick();
+                if (tState.running) {
+                  ref.read(timerProvider.notifier).pause();
+                } else {
+                  if (!finished) ref.read(timerProvider.notifier).resume();
+                }
+              },
+              icon: Icon(
+                tState.running ? Icons.pause_rounded : Icons.play_arrow_rounded,
+              ),
+            ),
+            const SizedBox(width: 4),
+          ],
+        ),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              children: [
+                Opacity(
+                  opacity: finished ? 0.35 : 1.0,
+                  child: _BigPulsingTimerCard(
+                    progress: tState.progress,
+                    seconds: tState.remaining,
+                    running: tState.running,
+                    message: tState.running
+                        ? 'المستذئب يحاول تحديد العرّاف/ة…'
+                        : (finished ? 'انتهى الوقت' : 'مُوقّف'),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                if (finished)
+                  Container(
+                    decoration: glassCard(18),
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.timer_off_rounded),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Text('انتهى الوقت! اضغطوا لعرض النتائج.'),
+                        ),
+                        FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.accent,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () {
+                            ref.read(phaseProvider.notifier).state =
+                                Phase.results;
+                            Navigator.of(context).push(
+                              PageRouteBuilder(
+                                pageBuilder: (_, __, ___) =>
+                                    const ResultsScreen(),
+                                transitionsBuilder: (_, a, __, c) =>
+                                    FadeTransition(opacity: a, child: c),
+                              ),
+                            );
+                          },
+                          child: const Text('عرض النتائج'),
+                        ),
+                      ],
+                    ),
+                  ),
+                const Spacer(),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 22),
+                      backgroundColor: AppColors.accent,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                    ),
+                    onPressed: () {
+                      ref.read(phaseProvider.notifier).state = Phase.results;
+                      Navigator.of(context).push(
+                        PageRouteBuilder(
+                          pageBuilder: (_, __, ___) => const ResultsScreen(),
+                          transitionsBuilder: (_, a, __, c) =>
+                              FadeTransition(opacity: a, child: c),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.check_circle_rounded, size: 28),
+                    label: const Text('تمّ التصويت',
+                        style: TextStyle(fontSize: 18)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

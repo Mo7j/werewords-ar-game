@@ -1,5 +1,5 @@
 name: werewords
-description: "A new Flutter project."
+description: "werewords game - ar"
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -16,17 +16,34 @@ dependencies:
     sdk: flutter
   google_fonts: ^6.3.1
   flutter_animate: ^4.5.0
-  path_provider: ^2.1.2 
+  path_provider: ^2.1.2
+  font_awesome_flutter: ^10.10.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1
+
+# 👇 MUST be top-level (NOT inside dev_dependencies)
+flutter_icons:
+  android: true
+  ios: true
+
+  # Base square icon (1024x1024 recommended)
+  image_path: assets/app_icon/icon.png
+
+  # (optional) Android adaptive icon
+  adaptive_icon_background: "#121212"       # or: assets/app_icon/adaptive_bg.png
+  adaptive_icon_foreground: assets/app_icon/icon_foreground.png
+
+  # (optional) iOS tweak
+  remove_alpha_ios: true
+
+  # (optional) ensure min SDK for adaptive icons
+  min_sdk_android: 21
 
 flutter:
-  # keep Material icons
   uses-material-design: true
-
-  # make sure this folder exists and contains ar_words.json
   assets:
-    - assets/words/
+    - assets/words/   # folder containing ar_words.json

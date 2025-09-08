@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'src/ui/setup_screen.dart';
+
+// Old: import 'src/ui/setup_screen.dart';
+import 'src/ui/splash_screen.dart'; // 👈 NEW
 import 'src/ui/theme.dart';
 
 void main() {
@@ -41,7 +43,7 @@ class WerewordsApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       theme: theme,
-      home: const SetupScreen(),
+      home: const SplashScreen(), // 👈 start on the loading screen
     );
   }
 }

@@ -24,10 +24,14 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
 
   String _roleLabel(Role r) {
     switch (r) {
-      case Role.mayor: return 'العمدة';
-      case Role.werewolf: return 'المستذئب';
-      case Role.seer: return 'العرّاف/ة';
-      case Role.villager: return 'قروي';
+      case Role.mayor:
+        return 'العمدة';
+      case Role.werewolf:
+        return 'المستذئب';
+      case Role.seer:
+        return 'العرّاف/ة';
+      case Role.villager:
+        return 'قروي';
     }
   }
 
@@ -39,15 +43,24 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(title: const Text('النتائج')),
+        backgroundColor: AppColors.bg,
+        appBar: AppBar(
+          title: const Text('النتائج'),
+          backgroundColor: Colors.transparent,
+        ),
         body: Stack(
           children: [
-            // background subtle gradient
+            // subtle background gradient
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [AppColors.accent.withOpacity(0.08), Colors.transparent, AppColors.accent2.withOpacity(0.08)],
-                  begin: Alignment.topLeft, end: Alignment.bottomRight,
+                  colors: [
+                    AppColors.accent.withOpacity(0.08),
+                    Colors.transparent,
+                    AppColors.accent2.withOpacity(0.08),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
               ),
             ),
@@ -55,37 +68,6 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
               padding: const EdgeInsets.all(16),
               child: ListView(
                 children: [
-                  // Final Guess card
-                  Container(
-                    decoration: glassCard(20),
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text('التخمين النهائي', style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: _guessCtrl,
-                          decoration: const InputDecoration(
-                            hintText: 'اكتب الكلمة النهائية هنا…',
-                            border: OutlineInputBorder(),
-                          ),
-                          textInputAction: TextInputAction.done,
-                          onSubmitted: (_) => _check(secret),
-                        ),
-                        const SizedBox(height: 12),
-                        FilledButton.icon(
-                          onPressed: () => _check(secret),
-                          icon: const Icon(Icons.flag_circle_rounded),
-                          label: const Text('تحقّق'),
-                        ),
-                        const SizedBox(height: 8),
-                        if (_checked) _OutcomeBanner(villagersWin: _villagersWin ?? false),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
                   // Secret word / reveal
                   Container(
                     decoration: glassCard(18),
@@ -100,7 +82,10 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                           child: Text(
                             secret,
                             textAlign: TextAlign.start,
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                       ],
@@ -116,7 +101,10 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text('كشف الأدوار', style: Theme.of(context).textTheme.titleMedium),
+                        Text(
+                          'كشف الأدوار',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
                         const SizedBox(height: 12),
                         ...List.generate(roles.length, (i) {
                           final r = roles[i];
@@ -129,7 +117,10 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                           return Container(
                             margin: const EdgeInsets.only(bottom: 8),
                             decoration: glassCard(14),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
                             child: Row(
                               children: [
                                 Icon(icon),
@@ -138,7 +129,12 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                                 const SizedBox(width: 10),
                                 const Text('—'),
                                 const SizedBox(width: 10),
-                                Text(_roleLabel(r), style: const TextStyle(fontWeight: FontWeight.w700)),
+                                Text(
+                                  _roleLabel(r),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
                               ],
                             ),
                           );
@@ -147,38 +143,35 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 16),
-
-                  // Actions
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            // New round with same config: go back to setup and keep app alive
-                            Navigator.of(context).popUntil((r) => r.isFirst);
-                          },
-                          icon: const Icon(Icons.replay_rounded),
-                          label: const Text('جولة جديدة'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: () {
-                            // Hard reset back to first page
-                            Navigator.of(context).popUntil((r) => r.isFirst);
-                          },
-                          icon: const Icon(Icons.home_rounded),
-                          label: const Text('عودة للرئيسية'),
-                        ),
-                      ),
-                    ],
-                  )
+                  // leave space so content doesn't sit under bottom buttons
+                  const SizedBox(height: 96),
                 ],
               ),
             ),
           ],
+        ),
+
+        // Bottom big buttons — same style as other screens
+        bottomNavigationBar: SafeArea(
+          minimum: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: SizedBox(
+            width: double.infinity, // no fixed height
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 22),
+                backgroundColor: AppColors.accent,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
+              onPressed: () {
+                Navigator.of(context).popUntil((r) => r.isFirst);
+              },
+              icon: const Icon(Icons.replay_rounded, size: 28),
+              label: const Text('جولة جديدة', style: TextStyle(fontSize: 18)),
+            ),
+          ),
         ),
       ),
     );
@@ -195,9 +188,8 @@ class _ResultsScreenState extends ConsumerState<ResultsScreen> {
   }
 
   String _normalize(String s) {
-    // Arabic is case-agnostic; we’ll trim and collapse inner spaces.
-    final t = s.trim().replaceAll(RegExp(r'\\s+'), ' ');
-    // Optionally strip tatweel and diacritics if you plan to add them later.
+    // Arabic is case-agnostic; trim and collapse inner spaces.
+    final t = s.trim().replaceAll(RegExp(r'\s+'), ' ');
     return t;
   }
 }
@@ -217,13 +209,28 @@ class _OutcomeBanner extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         color: color.withOpacity(0.12),
         border: Border.all(color: color.withOpacity(0.6)),
-        boxShadow: [BoxShadow(color: color.withOpacity(0.3), blurRadius: 18, spreadRadius: 1)],
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.3),
+            blurRadius: 18,
+            spreadRadius: 1,
+          ),
+        ],
       ),
       child: Row(
         children: [
-          Icon(villagersWin ? Icons.emoji_events_rounded : Icons.warning_rounded, color: color),
+          Icon(
+            villagersWin ? Icons.emoji_events_rounded : Icons.warning_rounded,
+            color: color,
+          ),
           const SizedBox(width: 10),
-          Text(text, style: TextStyle(color: color, fontWeight: FontWeight.w800)),
+          Text(
+            text,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
         ],
       ),
     );

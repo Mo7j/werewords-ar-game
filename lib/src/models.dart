@@ -16,46 +16,69 @@ class QaEntry {
 @immutable
 class GameConfig {
   final int playerCount;
-  final bool includeSeer;
   final int roundSeconds;
   final Difficulty difficulty;
 
+  /// Unified post-round discussion timer (used for both Find Werewolf & Hunt Seer)
+  final int postDiscussionSeconds;
+
   const GameConfig({
     required this.playerCount,
-    required this.includeSeer,
     required this.roundSeconds,
     required this.difficulty,
+    this.postDiscussionSeconds = 30,
   });
 
   GameConfig copyWith({
     int? playerCount,
-    bool? includeSeer,
     int? roundSeconds,
     Difficulty? difficulty,
+    int? postDiscussionSeconds,
   }) {
     return GameConfig(
       playerCount: playerCount ?? this.playerCount,
-      includeSeer: includeSeer ?? this.includeSeer,
       roundSeconds: roundSeconds ?? this.roundSeconds,
       difficulty: difficulty ?? this.difficulty,
+      postDiscussionSeconds:
+          postDiscussionSeconds ?? this.postDiscussionSeconds,
     );
   }
 
   static const defaultConfig = GameConfig(
     playerCount: 5,
-    includeSeer: true,
     roundSeconds: 300,
     difficulty: Difficulty.easy,
+    postDiscussionSeconds: 30,
   );
 }
 
-enum Phase { setup, roleReveal, questionTimer, finalGuess, results, findWerewolf, huntSeer }
+enum Phase {
+  setup,
+  roleReveal,
+  questionTimer,
+  finalGuess,
+  results,
+  findWerewolf,
+  huntSeer
+}
 
 class RolePool {
+  /// Distribution:
+  /// 4–6:  1 Mayor, 1 Seer, 1 Werewolf, rest Villagers
+  /// 7–11: 1 Mayor, 1 Seer, 2 Werewolves, rest Villagers
+  /// 12+:  1 Mayor, 1 Seer, 3 Werewolves, rest Villagers
+  /// (For 3 players, we naturally get Mayor+Seer+Werewolf.)
   static List<Role> forConfig(GameConfig cfg) {
-    final roles = <Role>[Role.mayor, Role.werewolf];
-    if (cfg.includeSeer) roles.add(Role.seer);
-    while (roles.length < cfg.playerCount) {
+    final n = cfg.playerCount;
+    final roles = <Role>[
+      Role.mayor,
+      Role.seer,
+    ];
+
+    final werewolves = n >= 12 ? 3 : (n >= 7 ? 2 : 1);
+    roles.addAll(List<Role>.filled(werewolves, Role.werewolf));
+
+    while (roles.length < n) {
       roles.add(Role.villager);
     }
     return roles;
