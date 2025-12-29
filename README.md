@@ -1,8 +1,12 @@
 # Werewords AR
 Small Arabic App for playing Werewords. Pick a word, share roles, run the timer, and track answers in one place.
 
-![Demo video](video/Demo.MP4)
+![▶️ Watch Demo Video](assets/video/Demo.MP4)
 
+Try it out:
+- Web: [https://werewords-ar.netlify.app/](https://werewords-ar.netlify.app/)
+- IOS: Download the apk!
+  
 ## What this app does
 - Arabic-first UI with right-to-left layout
 - Role reveal flow for Mayor, Seer, Werewolf, Villagers
