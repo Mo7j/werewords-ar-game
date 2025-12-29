@@ -1,7 +1,16 @@
 # Werewords AR
 Small Arabic App for playing Werewords. Pick a word, share roles, run the timer, and track answers in one place.
 
-![▶️ Watch Demo Video](assets/video/Demo.MP4)
+<table>
+  <tr>
+    <td><img src="assets/Demo/photo_1.jpg" width="180"/></td>
+    <td><img src="assets/Demo/photo_2.jpg" width="180"/></td>
+    <td><img src="assets/Demo/photo_3.jpg" width="180"/></td>
+    <td><img src="assets/Demo/photo_4.jpg" width="180"/></td>
+    <td><img src="assets/Demo/photo_5.jpg" width="180"/></td>
+    <td><img src="assets/Demo/photo_6.jpg" width="180"/></td>
+  </tr>
+</table>
 
 Try it out:
 - Web: [https://werewords-ar.netlify.app/](https://werewords-ar.netlify.app/)
