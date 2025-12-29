@@ -1,6 +1,7 @@
 # Werewords AR
+Small Arabic App for playing Werewords. Pick a word, share roles, run the timer, and track answers in one place.
 
-Small Arabic helper app for playing Werewords. Pick a word, share roles, run the timer, and track answers in one place.
+![Demo video](video/Demo.MP4)
 
 ## What this app does
 - Arabic-first UI with right-to-left layout
@@ -9,6 +10,14 @@ Small Arabic helper app for playing Werewords. Pick a word, share roles, run the
 - Round timer with quick yes/no/maybe logging
 - Post-round timers for Find Werewolf / Hunt Seer
 - Simple dark theme with glassy cards
+
+## How the game works
+1) Setup: pick number of players and word difficulty; the app assigns Mayor, Seer, Werewolf, and Villagers.
+2) Role reveal: each player privately views their role in turn.
+3) Secret word: the Mayor draws a word; the Seer can peek; the Werewolf stays in the dark.
+4) Guessing round: start the main timer; Mayor answers with yes / no / maybe while the app logs answers.
+5) After the timer: run the quick Find Werewolf timer; if the Werewolf is caught, run the Hunt Seer timer.
+6) Reset and start a new round with fresh roles/word.
 
 ## Tech
 - Flutter 3.x + Dart 3.x
