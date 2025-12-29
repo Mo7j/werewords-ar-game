@@ -14,7 +14,7 @@ Small Arabic App for playing Werewords. Pick a word, share roles, run the timer,
 
 Try it out:
 - Web: [https://werewords-ar.netlify.app/](https://werewords-ar.netlify.app/)
-- IOS: Download the apk!
+- IOS/Android: Build the apk!
   
 ## What this app does
 - Arabic-first UI with right-to-left layout
